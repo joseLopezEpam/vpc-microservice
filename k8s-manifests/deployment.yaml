@@ -36,7 +36,7 @@ spec:
             value: "us-east-1"
 
           - name: SQS_URL
-            value: "https://sqs.us-east-1.amazonaws.com/160885293398/vpcQueue-02796a8"
+            value: 
 
           - name: TMPDIR
             value: "/custom_tmp"
