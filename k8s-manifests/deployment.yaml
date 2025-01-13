@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpc-microservice-deployment
+  labels:
+    app: vpc-microservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpc-microservice
+  template:
+    metadata:
+      labels:
+        app: vpc-microservice
+    spec:
+      containers:
+      - name: vpc-microservice-container
+        image: jcarloslopez2/vpc-microservice:latest
+        # Arrancamos directamente Python, no "sleep infinity"
+        command: ["python3", "main.py"]
+        env:
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds-secret
+                key: aws_access_key_id
+
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds-secret
+                key: aws_secret_access_key
+
+          - name: AWS_REGION
+            value: "us-east-1"
+
+          - name: SQS_URL
+            value: "https://sqs.us-east-1.amazonaws.com/160885293398/vpcQueue-02796a8"
+
+          - name: TMPDIR
+            value: "/custom_tmp"
+
+        ports:
+          - containerPort: 8000
+        
+        # Ejemplo de probes (puedes ajustarlo a tu app real)
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 3
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 3
+          periodSeconds: 5
+
+        volumeMounts:
+          - name: temp-volume
+            mountPath: /custom_tmp
+
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 3000
+
+      volumes:
+      - name: temp-volume
+        emptyDir: {}
+
+      nodeSelector:
+        kubernetes.io/os: linux
+
+      # Ejemplo de tolerations / affinity si requieres
+      tolerations:
+      - key: "example-key"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - minikube
