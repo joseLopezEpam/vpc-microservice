@@ -1,0 +1,13 @@
+name: epam-platform-engineering-idp
+description: >
+  Creates a customizable VPC with all necessary components (e.g., NAT gateway, subnets, route tables) for a development environment. 
+  Supports varying sizes and user-defined subnet counts. Exports the VPC ID, CIDR block, and subnet IDs.
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python

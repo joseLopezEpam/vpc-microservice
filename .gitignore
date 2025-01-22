@@ -1,6 +1,6 @@
 venv/
 .env/
-
+__pycache__/
 vpc-microservice.tar
 test_credentials.py
 test.py
