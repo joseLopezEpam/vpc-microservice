@@ -32,7 +32,37 @@ spec:
           - name: AWS_REGION
             value: "us-east-1"
           - name: SQS_URL
+<<<<<<< HEAD
             value: "https://sqs.us-east-1.amazonaws.com/160885293398/vpcQueue-02796a8"
+=======
+            value: 
+
+          - name: TMPDIR
+            value: "/custom_tmp"
+
+        ports:
+          - containerPort: 8000
+        
+        # Ejemplo de probes (puedes ajustarlo a tu app real)
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 3
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 3
+          periodSeconds: 5
+
+        volumeMounts:
+          - name: temp-volume
+            mountPath: /custom_tmp
+
+>>>>>>> 34170d37c1f800f42921e86c4e61e8c8c6273a19
         resources:
           limits:
             cpu: "500m"
