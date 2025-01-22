@@ -2,3 +2,5 @@ venv/
 .env/
 
 vpc-microservice.tar
+test_credentials.py
+test.py
