@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vpc-microservice-deployment
+  namespace: vpc-microservice
   labels:
     app: vpc-microservice
 spec:
@@ -16,7 +17,8 @@ spec:
     spec:
       containers:
       - name: vpc-microservice
-        image: jcarloslopez2/vpc-microservice:latest
+        image: vpc-microservice:latest
+        imagePullPolicy: Never
         command: ["python3", "main.py"]
         env:
           - name: AWS_ACCESS_KEY_ID
@@ -30,43 +32,26 @@ spec:
                 name: aws-creds-secret
                 key: aws_secret_access_key
           - name: AWS_REGION
-            value: "us-east-1"
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds-secret
+                key: aws_region
           - name: SQS_URL
-<<<<<<< HEAD
-            value: "https://sqs.us-east-1.amazonaws.com/160885293398/vpcQueue-02796a8"
-=======
-            value: 
-
-          - name: TMPDIR
-            value: "/custom_tmp"
-
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds-secret
+                key: sqs_url
+          - name: PULUMI_ACCESS_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: aws-creds-secret
+                key: pulumi_access_token
         ports:
           - containerPort: 8000
-        
-        # Ejemplo de probes (puedes ajustarlo a tu app real)
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 8000
-          initialDelaySeconds: 3
-          periodSeconds: 10
-
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 8000
-          initialDelaySeconds: 3
-          periodSeconds: 5
-
-        volumeMounts:
-          - name: temp-volume
-            mountPath: /custom_tmp
-
->>>>>>> 34170d37c1f800f42921e86c4e61e8c8c6273a19
         resources:
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "500m"  # Máximo 0.5 CPU
+            memory: "512Mi"  # Máximo 512 MB de RAM
           requests:
-            cpu: "250m"
-            memory: "256Mi"
+            cpu: "250m"  # Requiere al menos 0.25 CPU
+            memory: "256Mi"  # Requiere al menos 256 MB de RAM

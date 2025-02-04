@@ -1,4 +1,6 @@
 import logging
+import os
+import pulumi
 from pulumi.automation import (
     create_or_select_stack,
     ConfigValue,
@@ -9,60 +11,52 @@ from vpc_stack import create_vpc_resources
 
 logger = logging.getLogger(__name__)
 
-def provision_vpc(project_name: str, stack_name: str, config: dict) -> dict:
-    """
-    Provisions a VPC using Pulumi Automation API.
+# Retrieve AWS credentials from environment variables
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.getenv("AWS_REGION")
 
-    :param project_name: Pulumi project name
-    :param stack_name: Stack name (e.g., "dev")
-    :param config: Configuration dictionary for the VPC
-    :return: Outputs from the Pulumi stack execution
+# Define the stack name that will manage multiple VPCs
+STACK_NAME = "my-vpc-stack"
+PROJECT_NAME = "multi-vpc-project"
+
+def pulumi_program(vpcs_to_create):
+    """
+    Pulumi program that provisions multiple VPCs within a single stack.
+    """
+    logger.info(f"Provisioning {len(vpcs_to_create)} VPC(s) in the same stack.")
+    for vpc_config in vpcs_to_create:
+        create_vpc_resources(vpc_config)  # Add each VPC to the stack
+
+def provision_vpcs(vpcs_to_create):
+    """
+    Provisions multiple VPCs in a single Pulumi stack.
     """
     try:
-        # Validate required configuration keys
-        required_keys = ["vpc_cidr", "num_public_subnets", "num_private_subnets"]
-        for key in required_keys:
-            if key not in config:
-                raise ValueError(f"Missing required config parameter: '{key}'")
-
-        logger.info(f"Configuration received: {config}")
-
-        def pulumi_program():
-            create_vpc_resources(config)
-
-        logger.info(f"Creating or selecting stack '{stack_name}' for project '{project_name}'...")
+        # Create or select the single stack
         stack = create_or_select_stack(
-            project_name=project_name,
-            stack_name=stack_name,
-            program=pulumi_program,
+            project_name=PROJECT_NAME,
+            stack_name=STACK_NAME,
+            program=lambda: pulumi_program(vpcs_to_create),
         )
 
-        logger.info("Installing AWS plugin for Pulumi...")
         stack.workspace.install_plugin("aws", "v6.66.0")
 
-        # Set the region explicitly using ConfigValue
-        region = config.get("tags", {}).get("Region", "us-east-1")
-        stack.set_config("aws:region", ConfigValue(value=region))
+        # Configure Pulumi with AWS credentials
+        stack.set_config("aws:region", ConfigValue(value=AWS_REGION))
+        stack.set_config("aws:accessKey", ConfigValue(value=AWS_ACCESS_KEY_ID))
+        stack.set_config("aws:secretKey", ConfigValue(value=AWS_SECRET_ACCESS_KEY))
 
-        # Refresh stack to sync state
-        logger.info("Refreshing Pulumi stack to sync state...")
+        # Synchronize the stack state
         stack.refresh(on_output=print)
 
-        logger.info("Executing 'pulumi up'...")
+        # Execute Pulumi to apply the changes
         up_res = stack.up(on_output=print)
-
-        # Log outputs
-        if not up_res.outputs:
-            logger.warning("'pulumi up' completed without generating outputs.")
-        else:
-            logger.info("Outputs from 'pulumi up':")
-            for key, output_value in up_res.outputs.items():
-                logger.info(f"  {key}: {output_value.value}")
 
         return up_res.outputs
 
     except ConcurrentUpdateError:
-        logger.error("Concurrent update detected: another Pulumi operation is in progress.", exc_info=True)
+        logger.error("Concurrent update detected.", exc_info=True)
         raise
     except StackAlreadyExistsError:
         logger.error("Stack already exists but encountered an error.", exc_info=True)
